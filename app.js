@@ -338,46 +338,81 @@ function setFormat(fmt) {
   layout();
 }
 
-/* HEIC (фото с айфонов) браузер не читает — конвертируем сами, конвертер грузится по требованию */
-function isHeic(f) {
-  const t = (f.type || '').toLowerCase();
-  const n = (f.name || '').toLowerCase();
-  return t.includes('heic') || t.includes('heif') || n.endsWith('.heic') || n.endsWith('.heif');
+/* Загрузка фото — три ступени:
+   1) родной декодер браузера (JPEG/PNG/WebP/AVIF — включая файлы с неверным расширением),
+   2) libheif 1.18 (HEIC/HEIF с айфонов, включая новые варианты),
+   3) честная ошибка с реальным типом файла внутри. */
+
+function sniffContainer(buf) {
+  const b = new Uint8Array(buf.slice(0, 24));
+  const ascii = (o, n) => String.fromCharCode.apply(null, b.slice(o, o + n));
+  if (b[0] === 0xFF && b[1] === 0xD8) return 'jpeg';
+  if (b[0] === 0x89 && ascii(1, 3) === 'PNG') return 'png';
+  if (ascii(0, 4) === 'RIFF' && ascii(8, 4) === 'WEBP') return 'webp';
+  if (ascii(4, 4) === 'ftyp') return 'iso/' + ascii(8, 4).trim();
+  return 'неизвестный';
 }
 
-let heicLoader = null;
-function ensureHeicLib() {
-  if (window.heic2any) return Promise.resolve();
-  if (!heicLoader) {
-    heicLoader = new Promise((res, rej) => {
+let heifLoader = null;
+function ensureLibheif() {
+  if (window.libheif) return Promise.resolve();
+  if (!heifLoader) {
+    heifLoader = new Promise((res, rej) => {
       const s = document.createElement('script');
-      s.src = 'heic2any.min.js';
+      s.src = 'libheif-bundle.js';
       s.onload = res;
-      s.onerror = () => { heicLoader = null; rej(new Error('нет сети для загрузки конвертера HEIC')); };
+      s.onerror = () => { heifLoader = null; rej(new Error('нет сети для загрузки конвертера HEIC')); };
       document.head.appendChild(s);
     });
   }
-  return heicLoader;
+  return heifLoader;
+}
+
+let heifModule = null;
+
+async function decodeHeif(buf) {
+  await ensureLibheif();
+  if (!heifModule) {
+    // libheif-bundle — фабрика wasm-модуля; разворачиваем один раз и переиспользуем
+    heifModule = (typeof window.libheif === 'function') ? await window.libheif() : window.libheif;
+  }
+  const decoder = new heifModule.HeifDecoder();
+  const images = decoder.decode(buf);
+  if (!images || !images.length) throw new Error('libheif не нашёл изображение в файле');
+  const image = images[0];
+  const w = image.get_width(), h = image.get_height();
+  const cnv = document.createElement('canvas');
+  cnv.width = w;
+  cnv.height = h;
+  const ctx = cnv.getContext('2d');
+  const imgData = ctx.createImageData(w, h);
+  await new Promise((res, rej) =>
+    image.display(imgData, (ok) => (ok ? res() : rej(new Error('libheif не смог отрисовать кадр')))));
+  ctx.putImageData(imgData, 0, 0);
+  images.forEach((im) => { if (im.free) im.free(); });
+  return cnv.toDataURL('image/jpeg', 0.92);
 }
 
 async function loadPhotoFile(f) {
   try {
-    let blob = f;
-    if (isHeic(f)) {
-      await ensureHeicLib();
-      blob = await window.heic2any({ blob: f, toType: 'image/jpeg', quality: 0.92 });
-      if (Array.isArray(blob)) blob = blob[0];
-    }
-    const dataUrl = await new Promise((res, rej) => {
-      const r = new FileReader();
-      r.onload = () => res(String(r.result));
-      r.onerror = () => rej(new Error('файл не читается'));
-      r.readAsDataURL(blob);
-    });
-    loadPhoto(dataUrl);
+    try {
+      const bmp = await createImageBitmap(f);
+      const k = Math.min(1, MAX_PHOTO_SIDE / Math.max(bmp.width, bmp.height));
+      const cnv = document.createElement('canvas');
+      cnv.width = Math.round(bmp.width * k);
+      cnv.height = Math.round(bmp.height * k);
+      cnv.getContext('2d').drawImage(bmp, 0, 0, cnv.width, cnv.height);
+      bmp.close();
+      loadPhoto(cnv.toDataURL('image/jpeg', 0.92));
+      return;
+    } catch (eNative) { /* браузер не осилил — пробуем HEIC-декодер */ }
+    loadPhoto(await decodeHeif(await f.arrayBuffer()));
   } catch (err) {
-    alert('Не получилось открыть это фото (' + (err && err.message ? err.message : 'формат не поддерживается') +
-      ').\nПопробуйте другой файл или пришлите фото как «файл» в Telegram → Поделиться → Студия.');
+    let kind = '?';
+    try { kind = sniffContainer(await f.arrayBuffer()); } catch (e2) {}
+    alert('Не получилось открыть фото.\nФормат внутри файла: ' + kind +
+      '\nОшибка: ' + (err && err.message ? err.message : err) +
+      '\nПришлите этот файл Александру-Claude — научим приложение его читать.');
   }
 }
 
