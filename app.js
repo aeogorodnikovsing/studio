@@ -338,19 +338,56 @@ function setFormat(fmt) {
   layout();
 }
 
-function handlePickedFile(input) {
-  const f = input.files && input.files[0];
-  if (!f) return;
-  const reader = new FileReader();
-  reader.onload = () => loadPhoto(String(reader.result));
-  reader.readAsDataURL(f);
-  input.value = '';
+/* HEIC (фото с айфонов) браузер не читает — конвертируем сами, конвертер грузится по требованию */
+function isHeic(f) {
+  const t = (f.type || '').toLowerCase();
+  const n = (f.name || '').toLowerCase();
+  return t.includes('heic') || t.includes('heif') || n.endsWith('.heic') || n.endsWith('.heif');
 }
-fileInput.addEventListener('change', () => handlePickedFile(fileInput));
-$('file-input-any').addEventListener('change', () => handlePickedFile($('file-input-any')));
+
+let heicLoader = null;
+function ensureHeicLib() {
+  if (window.heic2any) return Promise.resolve();
+  if (!heicLoader) {
+    heicLoader = new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'heic2any.min.js';
+      s.onload = res;
+      s.onerror = () => { heicLoader = null; rej(new Error('нет сети для загрузки конвертера HEIC')); };
+      document.head.appendChild(s);
+    });
+  }
+  return heicLoader;
+}
+
+async function loadPhotoFile(f) {
+  try {
+    let blob = f;
+    if (isHeic(f)) {
+      await ensureHeicLib();
+      blob = await window.heic2any({ blob: f, toType: 'image/jpeg', quality: 0.92 });
+      if (Array.isArray(blob)) blob = blob[0];
+    }
+    const dataUrl = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(String(r.result));
+      r.onerror = () => rej(new Error('файл не читается'));
+      r.readAsDataURL(blob);
+    });
+    loadPhoto(dataUrl);
+  } catch (err) {
+    alert('Не получилось открыть это фото (' + (err && err.message ? err.message : 'формат не поддерживается') +
+      ').\nПопробуйте другой файл или пришлите фото как «файл» в Telegram → Поделиться → Студия.');
+  }
+}
+
+fileInput.addEventListener('change', () => { const f = fileInput.files[0]; if (f) loadPhotoFile(f); fileInput.value = ''; });
+$('file-input-any').addEventListener('change', () => { const inp = $('file-input-any'); const f = inp.files[0]; if (f) loadPhotoFile(f); inp.value = ''; });
 
 function loadPhoto(dataUrl) {
   const img = new Image();
+  img.onerror = () => alert('Браузер не смог прочитать это изображение — похоже, редкий формат. ' +
+    'Попробуйте другой файл.');
   img.onload = () => {
     const k = Math.min(1, MAX_PHOTO_SIDE / Math.max(img.width, img.height));
     const cnv = document.createElement('canvas');
@@ -609,9 +646,8 @@ if ('caches' in window && new URLSearchParams(location.search).has('shared')) {
       if (resp) {
         const blob = await resp.blob();
         await inbox.delete('shared-photo');
-        const reader = new FileReader();
-        reader.onload = () => { setMode('post'); loadPhoto(String(reader.result)); };
-        reader.readAsDataURL(blob);
+        setMode('post');
+        loadPhotoFile(blob); // тоже умеет HEIC
       }
     } catch (err) { /* нет фото — обычный запуск */ }
     history.replaceState(null, '', location.pathname);
