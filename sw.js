@@ -1,7 +1,7 @@
 /* Офлайн-кэш студии: cache-first, версия меняется при каждом обновлении файлов */
 'use strict';
 
-const CACHE = 'studio-v2';
+const CACHE = 'studio-v3';
 const ASSETS = [
   './',
   'index.html',
@@ -27,6 +27,24 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
+  // приём фото из «Поделиться» (share target): кладём файл во временный кэш
+  // и отправляем пользователя на главный экран с флагом ?shared=1
+  const url = new URL(e.request.url);
+  if (e.request.method === 'POST' && url.pathname.endsWith('/share-target')) {
+    e.respondWith((async () => {
+      try {
+        const form = await e.request.formData();
+        const file = form.get('photo');
+        if (file && file.size) {
+          const inbox = await caches.open('share-inbox');
+          await inbox.put('shared-photo',
+            new Response(file, { headers: { 'Content-Type': file.type || 'image/jpeg' } }));
+        }
+      } catch (err) { /* без файла — просто откроем приложение */ }
+      return Response.redirect('./?shared=1', 303);
+    })());
+    return;
+  }
   if (e.request.method !== 'GET') return;
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true }).then((hit) => {
