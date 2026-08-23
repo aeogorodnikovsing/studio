@@ -1,7 +1,7 @@
 /* Офлайн-кэш студии: cache-first, версия меняется при каждом обновлении файлов */
 'use strict';
 
-const CACHE = 'studio-v4';
+const CACHE = 'studio-v5';
 const ASSETS = [
   './',
   'index.html',
@@ -9,6 +9,7 @@ const ASSETS = [
   'app.js',
   'golos.ttf',
   'marck.ttf',
+  'heic2any.min.js',
   'manifest.webmanifest',
   'icon-192.png',
   'icon-512.png',
