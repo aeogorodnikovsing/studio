@@ -138,20 +138,28 @@ body {
 }
 #edit-text:focus, #edit-script:focus, #edit-bar:focus { outline: none; border-color: #E8192C; }
 #edit-bar { margin-top: 8px; text-transform: uppercase; }
-.editor-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.editor-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 #edit-size {
   flex: 1 1 130px;
   accent-color: #E8192C;
   min-width: 110px;
 }
-.variants { display: flex; gap: 6px; }
-.variants button {
+.variants { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.vgroup { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.vlabel {
+  font-weight: 800; font-size: 10px; text-transform: uppercase;
+  letter-spacing: .06em; color: #888; min-width: 44px;
+}
+.vgroup button {
   appearance: none; cursor: pointer;
   background: none; border: 2px solid #3a3a3a; color: #bbb;
   font-family: inherit; font-weight: 800; font-size: 11px;
-  text-transform: uppercase; padding: 8px 10px;
+  text-transform: uppercase; padding: 7px 10px;
 }
-.variants button.on { border-color: #E8192C; color: #fff; }
+.vgroup button.on { border-color: #E8192C; color: #fff; }
+
+.formats { padding-bottom: 0; align-items: center; }
+.formats .chip.on { border-color: #E8192C; color: #E8192C; }
 .btn-del {
   appearance: none; cursor: pointer;
   background: none; border: 2px solid #E8192C; color: #E8192C;
