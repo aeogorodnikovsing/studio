@@ -1,10 +1,17 @@
-/* Студия: подписи 1080×1080 и титры 1080×1920 в айдентике Александра Огородникова.
+/* Студия: подписи для постов и титры для Reels в айдентике Александра Огородникова.
    Экспорт — точный рендер сцены в PNG через SVG foreignObject (тот же движок, что и на экране). */
 
 'use strict';
 
-const POST_W = 1080, POST_H = 1080;
 const TITR_W = 1080, TITR_H = 1920;
+
+/* форматы поста: 1:1 всегда первый */
+const FORMATS = {
+  '1:1':  [1080, 1080],
+  '3:4':  [1080, 1440],
+  '4:5':  [1080, 1350],
+  '9:16': [1080, 1920],
+};
 
 const $ = (id) => document.getElementById(id);
 
@@ -16,10 +23,12 @@ const fileInput = $('file-input');
 
 const state = {
   mode: 'post',
+  format: '1:1',
   selected: null, // DOM-элемент слоя
   photo: null,    // {dataUrl, w, h, scale, minScale, tx, ty}
-  idSeq: 1,
 };
+
+const postSize = () => FORMATS[state.format];
 
 /* ────────────────── типы слоёв ────────────────── */
 
@@ -29,18 +38,31 @@ const SWIPE_ARROW =
   '<path d="M59 13 L 71 15 L 66 27" stroke="#E8192C" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>' +
   '</svg>';
 
-const LAYER_TYPES = {
-  headline:   { size: 72,  text: 'ЗАГОЛОВОК',        cls: 'l-headline' },
-  print:      { size: 44,  text: 'Печатный текст',   cls: 'l-print' },
-  script:     { size: 34,  text: 'рукописная строка', cls: 'l-script' },
-  marker:     { size: 32,  text: 'ключевая фраза',   cls: 'l-marker' },
-  sticker:    { size: 28,  text: 'актуалочка',       cls: 'l-sticker', variants: [['', 'Красный'], ['white', 'Белый']] },
-  swipe:      { size: 38,  text: 'листай',           cls: 'l-swipe',   variants: [['', 'Тёмный'], ['light', 'Светлый']] },
-  h1:         { size: 88,  text: 'ЗАГОЛОВОК ТИТРА',  cls: 'l-headline l-h1' },
-  freescript: { size: 66,  text: 'рукописная строка', cls: 'l-freescript', variants: [['', 'Белый'], ['red', 'Красный']] },
-  body:       { size: 36,  text: 'Основной текст',   cls: 'l-body' },
-  stack:      { size: 64,  text: '', cls: 'l-stack', script: 'верни мой', bar: '2008 ГОД' },
+/* спец-слои с собственной версткой */
+const SPECIAL = {
+  marker:  { size: 32, text: 'ключевая фраза', cls: 'l-marker' },
+  sticker: { size: 28, text: 'актуалочка',     cls: 'l-sticker', variants: [['', 'Красный'], ['white', 'Белый']] },
+  swipe:   { size: 38, text: 'листай',         cls: 'l-swipe',   variants: [['', 'Тёмный'], ['light', 'Светлый']] },
+  stack:   { size: 64, text: '', cls: 'l-stack', script: 'верни мой', bar: '2008 ГОД' },
 };
+
+/* пресеты универсального текстового слоя: шрифт/фон/цвет меняются в редакторе */
+const PRESETS = {
+  post: {
+    headline: { font: 'golos800', bg: 'none',  color: 'white', size: 72, text: 'ЗАГОЛОВОК' },
+    print:    { font: 'golos',    bg: 'none',  color: 'white', size: 44, text: 'Печатный текст' },
+    script:   { font: 'marck',    bg: 'black', color: 'white', size: 34, text: 'рукописная строка' },
+  },
+  titry: {
+    headline: { font: 'golos800', bg: 'none',  color: 'white', size: 88, text: 'ЗАГОЛОВОК ТИТРА' },
+    print:    { font: 'golos',    bg: 'none',  color: 'white', size: 36, text: 'Основной текст' },
+    script:   { font: 'marck',    bg: 'none',  color: 'white', size: 66, text: 'рукописная строка' },
+  },
+};
+
+const FONT_OPTS = [['golos800', 'Жирный'], ['golos', 'Обычный'], ['marck', 'Рукопись']];
+const BG_OPTS = [['none', 'Нет'], ['black', 'Чёрный'], ['white', 'Белый'], ['red', 'Красный']];
+const COLOR_OPTS = [['white', 'Белый'], ['red', 'Красный'], ['black', 'Чёрный']];
 
 function escapeHtml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -53,16 +75,24 @@ function richText(s) {
     .replace(/\n/g, '<br>');
 }
 
+function applyTextClasses(el) {
+  const d = el.dataset;
+  const keep = el.classList.contains('selected') ? ' selected' : '';
+  el.className = 'layer l-text f-' + d.font + ' bg-' + d.bg + ' c-' + d.color +
+    (d.bg !== 'none' ? ' has-bg' : '') + keep;
+}
+
 function renderLayerContent(el) {
   const d = el.dataset;
   const inner = el.querySelector('.inner');
-  if (d.type === 'stack') {
+  if (d.type === 'text') {
+    applyTextClasses(el);
+    inner.innerHTML = '<span class="strip">' + richText(d.text) + '</span>';
+  } else if (d.type === 'stack') {
     inner.innerHTML =
       '<div class="script-line">' + escapeHtml(d.script || ' ') + '</div>' +
       '<div class="bar"><span class="fit">' + escapeHtml((d.bar || ' ').toUpperCase()) + '</span></div>';
     fitStack(el);
-  } else if (d.type === 'script') {
-    inner.innerHTML = '<span class="strip">' + richText(d.text) + '</span>';
   } else if (d.type === 'swipe') {
     inner.innerHTML = '<span>' + richText(d.text) + '</span>' + SWIPE_ARROW;
   } else {
@@ -90,21 +120,32 @@ function fitStack(el) {
   }
 }
 
-function addLayer(type) {
-  const def = LAYER_TYPES[type];
+function addLayer(kind) {
   const el = document.createElement('div');
-  el.className = 'layer ' + def.cls;
-  el.dataset.type = type;
-  el.dataset.text = def.text;
-  if (type === 'stack') { el.dataset.script = def.script; el.dataset.bar = def.bar; }
-  el.style.fontSize = def.size + 'px';
+  let size;
+  if (SPECIAL[kind]) {
+    const def = SPECIAL[kind];
+    el.className = 'layer ' + def.cls;
+    el.dataset.type = kind;
+    el.dataset.text = def.text;
+    if (kind === 'stack') { el.dataset.script = def.script; el.dataset.bar = def.bar; }
+    size = def.size;
+  } else {
+    const p = PRESETS[state.mode][kind];
+    el.dataset.type = 'text';
+    el.dataset.text = p.text;
+    el.dataset.font = p.font;
+    el.dataset.bg = p.bg;
+    el.dataset.color = p.color;
+    size = p.size;
+  }
+  el.style.fontSize = size + 'px';
   el.innerHTML = '<div class="inner"></div>';
 
-  const stage = stages[state.mode];
-  const pos = defaultPos(type);
+  const pos = defaultPos(kind);
   el.style.left = pos.x + 'px';
   el.style.top = pos.y + 'px';
-  stage.appendChild(el);
+  stages[state.mode].appendChild(el);
   renderLayerContent(el);
   attachLayerEvents(el);
 
@@ -115,14 +156,16 @@ function addLayer(type) {
   return el;
 }
 
-function defaultPos(type) {
+function defaultPos(kind) {
   if (state.mode === 'titry') {
-    const tops = { h1: 1120, freescript: 1050, body: 1250, stack: 1100, marker: 1350, sticker: 990 };
-    return { x: 80, y: tops[type] || 1150 };
+    const tops = { headline: 1120, script: 1050, print: 1250, stack: 1100, marker: 1350, sticker: 990 };
+    return { x: 80, y: tops[kind] || 1150 };
   }
+  const [, H] = postSize();
+  const k = H / 1080;
   const tops = { headline: 560, print: 660, script: 700, marker: 860, sticker: 80, swipe: 900 };
   const lefts = { sticker: 58, swipe: 640 };
-  return { x: lefts[type] || 58, y: tops[type] || 600 };
+  return { x: lefts[kind] || 58, y: Math.round((tops[kind] || 600) * k) };
 }
 
 /* ────────────────── выбор и редактор ────────────────── */
@@ -153,10 +196,40 @@ function selectLayer(el) {
   editor.hidden = false;
 }
 
+function optionGroup(el, label, opts, key) {
+  const wrap = document.createElement('div');
+  wrap.className = 'vgroup';
+  const lab = document.createElement('span');
+  lab.className = 'vlabel';
+  lab.textContent = label;
+  wrap.appendChild(lab);
+  opts.forEach(([val, name]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = name;
+    if (el.dataset[key] === val) b.classList.add('on');
+    b.addEventListener('click', () => {
+      el.dataset[key] = val;
+      renderLayerContent(el);
+      buildVariants(el);
+    });
+    wrap.appendChild(b);
+  });
+  return wrap;
+}
+
 function buildVariants(el) {
   variantsBox.innerHTML = '';
-  const def = LAYER_TYPES[el.dataset.type];
-  if (!def.variants) return;
+  if (el.dataset.type === 'text') {
+    variantsBox.appendChild(optionGroup(el, 'Шрифт', FONT_OPTS, 'font'));
+    variantsBox.appendChild(optionGroup(el, 'Фон', BG_OPTS, 'bg'));
+    variantsBox.appendChild(optionGroup(el, 'Цвет', COLOR_OPTS, 'color'));
+    return;
+  }
+  const def = SPECIAL[el.dataset.type];
+  if (!def || !def.variants) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'vgroup';
   def.variants.forEach(([cls, label]) => {
     const b = document.createElement('button');
     b.type = 'button';
@@ -168,8 +241,9 @@ function buildVariants(el) {
       if (cls) el.classList.add(cls);
       buildVariants(el);
     });
-    variantsBox.appendChild(b);
+    wrap.appendChild(b);
   });
+  variantsBox.appendChild(wrap);
 }
 
 editText.addEventListener('input', () => {
@@ -239,6 +313,25 @@ $('toolbar-titry').addEventListener('click', (e) => {
   if (!btn || !btn.dataset.add) return;
   addLayer(btn.dataset.add);
 });
+$('toolbar-formats').addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (btn && btn.dataset.fmt) setFormat(btn.dataset.fmt);
+});
+
+function setFormat(fmt) {
+  state.format = fmt;
+  document.querySelectorAll('#toolbar-formats [data-fmt]').forEach((b) =>
+    b.classList.toggle('on', b.dataset.fmt === fmt));
+  const [W, H] = postSize();
+  stages.post.style.width = W + 'px';
+  stages.post.style.height = H + 'px';
+  if (state.photo) {
+    const p = state.photo;
+    p.minScale = Math.max(W / p.w, H / p.h);
+    applyPhoto();
+  }
+  layout();
+}
 
 fileInput.addEventListener('change', () => {
   const f = fileInput.files && fileInput.files[0];
@@ -252,19 +345,19 @@ fileInput.addEventListener('change', () => {
 function loadPhoto(dataUrl) {
   const img = new Image();
   img.onload = () => {
-    let { width: w, height: h } = img;
-    const k = Math.min(1, MAX_PHOTO_SIDE / Math.max(w, h));
+    const k = Math.min(1, MAX_PHOTO_SIDE / Math.max(img.width, img.height));
     const cnv = document.createElement('canvas');
-    cnv.width = Math.round(w * k);
-    cnv.height = Math.round(h * k);
+    cnv.width = Math.round(img.width * k);
+    cnv.height = Math.round(img.height * k);
     cnv.getContext('2d').drawImage(img, 0, 0, cnv.width, cnv.height);
     const url = cnv.toDataURL('image/jpeg', 0.92);
-    const minScale = Math.max(POST_W / cnv.width, POST_H / cnv.height);
+    const [W, H] = postSize();
+    const minScale = Math.max(W / cnv.width, H / cnv.height);
     state.photo = {
       dataUrl: url, w: cnv.width, h: cnv.height,
       scale: minScale, minScale,
-      tx: (POST_W - cnv.width * minScale) / 2,
-      ty: (POST_H - cnv.height * minScale) / 2,
+      tx: (W - cnv.width * minScale) / 2,
+      ty: (H - cnv.height * minScale) / 2,
     };
     photoEl.src = url;
     photoEl.hidden = false;
@@ -277,9 +370,10 @@ function loadPhoto(dataUrl) {
 function applyPhoto() {
   const p = state.photo;
   if (!p) return;
+  const [W, H] = postSize();
   p.scale = Math.max(p.scale, p.minScale);
-  p.tx = Math.min(0, Math.max(POST_W - p.w * p.scale, p.tx));
-  p.ty = Math.min(0, Math.max(POST_H - p.h * p.scale, p.ty));
+  p.tx = Math.min(0, Math.max(W - p.w * p.scale, p.tx));
+  p.ty = Math.min(0, Math.max(H - p.h * p.scale, p.ty));
   photoEl.style.left = '0px';
   photoEl.style.top = '0px';
   photoEl.style.width = p.w + 'px';
@@ -360,6 +454,7 @@ function setMode(mode) {
   holders.post.hidden = mode !== 'post';
   holders.titry.hidden = mode !== 'titry';
   $('toolbar-post').hidden = mode !== 'post';
+  $('toolbar-formats').hidden = mode !== 'post';
   $('toolbar-titry').hidden = mode !== 'titry';
   layout();
 }
@@ -371,7 +466,8 @@ function layout() {
   const pad = 14;
   const vw = viewport.clientWidth - pad * 2;
   const vh = viewport.clientHeight - pad * 2;
-  [['post', POST_W, POST_H], ['titry', TITR_W, TITR_H]].forEach(([m, w, h]) => {
+  const [PW, PH] = postSize();
+  [['post', PW, PH], ['titry', TITR_W, TITR_H]].forEach(([m, w, h]) => {
     const s = Math.min(vw / w, vh / h);
     scales[m] = s;
     const holder = holders[m];
@@ -414,8 +510,7 @@ async function fontFaceCss() {
 
 async function exportPng() {
   const isPost = state.mode === 'post';
-  const W = isPost ? POST_W : TITR_W;
-  const H = isPost ? POST_H : TITR_H;
+  const [W, H] = isPost ? postSize() : [TITR_W, TITR_H];
   const stage = stages[state.mode];
 
   selectLayer(null);
@@ -442,8 +537,7 @@ async function exportPng() {
   const cnv = document.createElement('canvas');
   cnv.width = W;
   cnv.height = H;
-  const ctx = cnv.getContext('2d');
-  ctx.drawImage(img, 0, 0, W, H);
+  cnv.getContext('2d').drawImage(img, 0, 0, W, H);
   const blob = await new Promise((res) => cnv.toBlob(res, 'image/png'));
   if (!blob) throw new Error('toBlob failed');
   return { blob, dataUrl: cnv.toDataURL('image/png'), isPost };
@@ -490,14 +584,13 @@ $('btn-close').addEventListener('click', () => { $('modal').hidden = true; });
 
 /* ────────────────── старт ────────────────── */
 
-stages.post.style.width = POST_W + 'px';
-stages.post.style.height = POST_H + 'px';
 stages.titry.style.width = TITR_W + 'px';
 stages.titry.style.height = TITR_H + 'px';
 
 document.fonts.ready.then(() => {
   document.querySelectorAll('.l-stack').forEach(fitStack);
 });
+setFormat('1:1');
 setMode('post');
 
 if ('serviceWorker' in navigator) {
@@ -508,6 +601,7 @@ if ('serviceWorker' in navigator) {
 window.__test = {
   addLayer,
   setMode,
+  setFormat,
   loadPhoto,
   exportPng,
   renderLayerContent,
