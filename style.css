@@ -1,0 +1,195 @@
+/* Интерфейс студии — айдентика Александра Огородникова: #141414 / #E8192C, Golos Text, прямые углы */
+
+@font-face {
+  font-family: 'Golos Text';
+  src: url('golos.ttf') format('truetype');
+  font-weight: 400 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Marck Script';
+  src: url('marck.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: #141414;
+  color: #fff;
+  font-family: 'Golos Text', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+
+/* ── верхняя панель ── */
+.topbar {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  background: #141414;
+  border-bottom: 1px solid #2a2a2a;
+  padding: env(safe-area-inset-top) 0 0 0;
+  flex: 0 0 auto;
+}
+.tabs { display: flex; }
+.tab {
+  appearance: none; border: 0; background: none;
+  font-family: inherit; font-weight: 800; font-size: 13px;
+  text-transform: uppercase; letter-spacing: .06em;
+  color: #888; padding: 16px 18px 13px;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+}
+.tab.active { color: #fff; border-bottom-color: #E8192C; }
+.btn-export {
+  appearance: none; border: 0; cursor: pointer;
+  background: #E8192C; color: #fff;
+  font-family: inherit; font-weight: 800; font-size: 14px;
+  text-transform: uppercase; letter-spacing: .05em;
+  padding: 0 26px; margin: 8px 10px;
+}
+.btn-export:active { transform: scale(.96); }
+
+/* ── сцена ── */
+.viewport {
+  flex: 1 1 auto;
+  position: relative;
+  overflow: hidden;
+  background: #0d0d0d;
+  touch-action: none;
+}
+.stage-holder {
+  position: absolute;
+  transform-origin: 0 0;
+  /* тёмная «шахматка» — чтобы видеть прозрачный фон титров */
+  background:
+    repeating-conic-gradient(#1a1a1a 0% 25%, #232323 0% 50%) 0 0 / 120px 120px;
+  box-shadow: 0 0 0 1px #2a2a2a;
+}
+.stage-hint {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center;
+  font-weight: 600; font-size: 40px; line-height: 1.5;
+  color: #555;
+  pointer-events: none;
+}
+
+.layer.selected { outline: 3px dashed #E8192C; outline-offset: 6px; }
+
+.guides .dead {
+  position: absolute;
+  background: rgba(232, 25, 44, .13);
+  border: 1px dashed rgba(232, 25, 44, .5);
+  pointer-events: none;
+}
+
+/* ── нижняя панель ── */
+.panel {
+  flex: 0 0 auto;
+  background: #1d1d1d;
+  border-top: 1px solid #2a2a2a;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.toolbar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 12px 12px;
+  scrollbar-width: none;
+}
+.toolbar::-webkit-scrollbar { display: none; }
+.chip {
+  appearance: none; cursor: pointer;
+  background: none; color: #fff;
+  border: 2px solid #3a3a3a;
+  font-family: inherit; font-weight: 800; font-size: 12px;
+  text-transform: uppercase; letter-spacing: .05em;
+  padding: 10px 14px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.chip:active { border-color: #E8192C; }
+.chip-photo { background: #fff; color: #141414; border-color: #fff; }
+.chip.toggle.on { border-color: #E8192C; color: #E8192C; }
+.sep { flex: 0 0 1px; background: #3a3a3a; margin: 4px 4px; }
+
+/* ── редактор слоя ── */
+.editor { padding: 4px 12px 14px; border-top: 1px solid #2a2a2a; }
+.editor-row { margin-top: 10px; }
+#edit-text, #edit-script, #edit-bar {
+  width: 100%;
+  background: #141414;
+  border: 2px solid #3a3a3a;
+  color: #fff;
+  font-family: inherit; font-size: 16px;
+  padding: 10px 12px;
+  resize: none;
+}
+#edit-text:focus, #edit-script:focus, #edit-bar:focus { outline: none; border-color: #E8192C; }
+#edit-bar { margin-top: 8px; text-transform: uppercase; }
+.editor-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#edit-size {
+  flex: 1 1 130px;
+  accent-color: #E8192C;
+  min-width: 110px;
+}
+.variants { display: flex; gap: 6px; }
+.variants button {
+  appearance: none; cursor: pointer;
+  background: none; border: 2px solid #3a3a3a; color: #bbb;
+  font-family: inherit; font-weight: 800; font-size: 11px;
+  text-transform: uppercase; padding: 8px 10px;
+}
+.variants button.on { border-color: #E8192C; color: #fff; }
+.btn-del {
+  appearance: none; cursor: pointer;
+  background: none; border: 2px solid #E8192C; color: #E8192C;
+  font-family: inherit; font-weight: 800; font-size: 12px;
+  text-transform: uppercase; padding: 9px 13px;
+}
+.btn-done {
+  appearance: none; cursor: pointer;
+  background: #fff; border: 2px solid #fff; color: #141414;
+  font-family: inherit; font-weight: 800; font-size: 12px;
+  text-transform: uppercase; padding: 9px 15px;
+}
+
+/* ── модалка результата ── */
+.modal {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(13, 13, 13, .94);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.modal-body { max-width: 420px; width: 100%; }
+#modal-img {
+  display: block; width: 100%;
+  background:
+    repeating-conic-gradient(#1a1a1a 0% 25%, #232323 0% 50%) 0 0 / 40px 40px;
+  box-shadow: 0 0 0 1px #2a2a2a;
+  max-height: 62dvh;
+  object-fit: contain;
+}
+.modal-btns { display: flex; gap: 8px; margin-top: 14px; }
+.btn-main {
+  appearance: none; cursor: pointer; text-decoration: none; text-align: center;
+  background: #E8192C; border: 2px solid #E8192C; color: #fff;
+  font-family: inherit; font-weight: 800; font-size: 13px;
+  text-transform: uppercase; letter-spacing: .04em;
+  padding: 13px 16px; flex: 1 1 auto;
+}
+.btn-ghost { background: none; border-color: #3a3a3a; }
+.btn-x { flex: 0 0 auto; }
+
+[hidden] { display: none !important; }
