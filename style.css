@@ -89,8 +89,15 @@ body {
 
 .guides .dead {
   position: absolute;
-  background: rgba(232, 25, 44, .13);
-  border: 1px dashed rgba(232, 25, 44, .5);
+  background: rgba(232, 25, 44, .10);
+  border: 1px dashed rgba(232, 25, 44, .45);
+  pointer-events: none;
+}
+.guides .ig-mock {
+  position: absolute;
+  inset: 0;
+  width: 1080px;
+  height: 1920px;
   pointer-events: none;
 }
 
@@ -124,8 +131,18 @@ body {
 .chip.toggle.on { border-color: #E8192C; color: #E8192C; }
 .sep { flex: 0 0 1px; background: #3a3a3a; margin: 4px 4px; }
 
-/* ── редактор слоя ── */
-.editor { padding: 4px 12px 14px; border-top: 1px solid #2a2a2a; }
+/* ── редактор слоя: плавающая панель поверх сцены, холст не пересчитывается ── */
+.editor {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 30;
+  background: #1d1d1d;
+  border-top: 1px solid #2a2a2a;
+  padding: 4px 12px calc(14px + env(safe-area-inset-bottom));
+  transition: opacity .15s;
+}
+/* во время перетаскивания слоя панель исчезает — виден весь холст */
+body.dragging .editor { opacity: 0; pointer-events: none; }
 .editor-row { margin-top: 10px; }
 #edit-text, #edit-script, #edit-bar {
   width: 100%;
