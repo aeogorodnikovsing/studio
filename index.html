@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#141414">
+<title>Студия</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="style.css">
+<!-- Стили сцены: точная копия правил из скиллов post_insta / titry.
+     Этот блок целиком уходит в экспортируемый PNG — менять только вместе со скиллами. -->
+<style id="stage-css">
+.stage { position: relative; overflow: hidden; }
+.stage-post  { background: #141414; }
+.stage-titry { background: transparent; }
+.photo { position: absolute; transform-origin: 0 0; }
+
+.layer { position: absolute; touch-action: none; }
+.layer .inner { display: block; }
+
+/* — затемнения титров (из titry/base.css, до краёв кадра) — */
+.scrim { position: absolute; left: 0; width: 1080px; pointer-events: none; }
+.scrim-top { top: 0; height: 760px;
+  background: linear-gradient(to bottom,
+    rgba(20,20,20,0.88) 0%, rgba(20,20,20,0.84) 58%,
+    rgba(20,20,20,0.50) 82%, rgba(20,20,20,0) 100%); }
+.scrim-bottom { bottom: 0; height: 960px;
+  background: linear-gradient(to top,
+    rgba(20,20,20,0.88) 0%, rgba(20,20,20,0.84) 58%,
+    rgba(20,20,20,0.50) 82%, rgba(20,20,20,0) 100%); }
+
+/* — печатный текст: белый с чёрным ореолом (post_insta) — */
+.l-headline .inner {
+  font-family: 'Golos Text', sans-serif; font-weight: 800;
+  text-transform: uppercase; letter-spacing: -0.02em;
+  color: #fff; line-height: 1.06;
+  text-shadow: 0 0 12px rgba(20,20,20,.9), 0 0 28px rgba(20,20,20,.7), 0 2px 8px rgba(20,20,20,.8);
+}
+.l-print .inner {
+  font-family: 'Golos Text', sans-serif; font-weight: 600;
+  color: #fff; line-height: 1.3;
+  text-shadow: 0 0 12px rgba(20,20,20,.9), 0 0 28px rgba(20,20,20,.7), 0 2px 8px rgba(20,20,20,.8);
+}
+
+/* — рукописный: БЕЗ ореола, на сплошных чёрных полосах — */
+.l-script .inner { font-family: 'Marck Script', cursive; color: #fff; line-height: 1.85; }
+.l-script .inner .strip {
+  background: #141414; padding: 5px 16px 7px;
+  box-decoration-break: clone; -webkit-box-decoration-break: clone;
+}
+
+/* — заголовок титра: без ореола (читаемость даёт затемнение), метрики из titry/base.css — */
+.l-h1 .inner { text-shadow: none; letter-spacing: -0.025em; line-height: 1.04; }
+
+/* — рукописный для титров: без полосы, поверх затемнения — */
+.l-freescript .inner { font-family: 'Marck Script', cursive; color: #fff; line-height: 1.12; }
+.l-freescript.red .inner { color: #E8192C; }
+
+/* — основной текст титров — */
+.l-body .inner { font-family: 'Golos Text', sans-serif; font-weight: 500; color: #fff; line-height: 1.42; }
+
+/* — красный маркер, строго одна строка — */
+.l-marker .inner {
+  display: inline-block; font-family: 'Golos Text', sans-serif; font-weight: 600;
+  color: #fff; letter-spacing: -0.01em; white-space: nowrap;
+  background: linear-gradient(104deg, transparent 1%, #E8192C 3%, #E8192C 97%, transparent 99%);
+  padding: .22em .56em .28em;
+}
+
+/* — стикер-рубрика — */
+.l-sticker .inner {
+  display: inline-block; background: #E8192C; color: #fff;
+  font-family: 'Golos Text', sans-serif; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .02em;
+  padding: .21em .57em .29em; transform: rotate(-3deg);
+}
+.l-sticker.white .inner { background: #fff; color: #141414; transform: rotate(2deg); }
+
+/* — «листай карусель»: рукописный + красная SVG-стрелка — */
+.l-swipe .inner { display: flex; align-items: center; gap: .3em; font-family: 'Marck Script', cursive; color: #141414; }
+.l-swipe .inner svg { width: 1.9em; height: 1.15em; flex: 0 0 auto; }
+.l-swipe.light .inner {
+  font-family: 'Golos Text', sans-serif; font-weight: 600; color: #fff;
+  text-shadow: 0 0 12px rgba(20,20,20,.92), 0 0 28px rgba(20,20,20,.75);
+}
+
+/* — «полоса»: рукописная строка + слово капсом на красной полосе во всю её ширину — */
+.l-stack .inner { display: inline-block; }
+.l-stack .script-line { font-family: 'Marck Script', cursive; color: #fff; line-height: 1.15; white-space: nowrap; }
+.l-stack .bar { background: #E8192C; margin-top: .09em; padding: .1em .28em .16em; font-size: 1em; }
+.l-stack .bar .fit {
+  display: inline-block; font-family: 'Golos Text', sans-serif; font-weight: 800;
+  text-transform: uppercase; letter-spacing: -0.02em; color: #fff; white-space: nowrap; line-height: 1.05;
+}
+
+.accent { color: #E8192C; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <nav class="tabs">
+    <button id="tab-post" class="tab active" type="button">Пост 1:1</button>
+    <button id="tab-titry" class="tab" type="button">Титры 9:16</button>
+  </nav>
+  <button id="btn-export" class="btn-export" type="button">PNG</button>
+</header>
+
+<main class="viewport" id="viewport">
+  <div class="stage-holder" id="holder-post">
+    <div class="stage stage-post" id="stage-post">
+      <img class="photo" id="photo" alt="" draggable="false" hidden>
+      <div class="stage-hint noexport" id="post-hint">Загрузите фото<br>кнопкой «Фото» внизу</div>
+    </div>
+  </div>
+  <div class="stage-holder" id="holder-titry" hidden>
+    <div class="stage stage-titry" id="stage-titry">
+      <div class="scrim scrim-top" id="scrim-top" hidden></div>
+      <div class="scrim scrim-bottom" id="scrim-bottom" hidden></div>
+      <div class="guides noexport" id="guides" hidden>
+        <div class="dead" style="left:0;top:0;width:1080px;height:200px"></div>
+        <div class="dead" style="left:0;top:1520px;width:1080px;height:400px"></div>
+        <div class="dead" style="left:990px;top:200px;width:90px;height:1320px"></div>
+        <div class="dead" style="left:0;top:200px;width:50px;height:1320px"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<section class="panel" id="panel">
+  <div class="toolbar" id="toolbar-post">
+    <button class="chip chip-photo" data-act="photo" type="button">Фото</button>
+    <button class="chip" data-add="headline" type="button">Заголовок</button>
+    <button class="chip" data-add="print" type="button">Текст</button>
+    <button class="chip" data-add="script" type="button">Рукопись</button>
+    <button class="chip" data-add="marker" type="button">Маркер</button>
+    <button class="chip" data-add="sticker" type="button">Стикер</button>
+    <button class="chip" data-add="swipe" type="button">Листай</button>
+  </div>
+  <div class="toolbar" id="toolbar-titry" hidden>
+    <button class="chip" data-add="h1" type="button">Заголовок</button>
+    <button class="chip" data-add="freescript" type="button">Рукопись</button>
+    <button class="chip" data-add="stack" type="button">Полоса</button>
+    <button class="chip" data-add="body" type="button">Текст</button>
+    <button class="chip" data-add="marker" type="button">Маркер</button>
+    <button class="chip" data-add="sticker" type="button">Стикер</button>
+    <span class="sep"></span>
+    <button class="chip toggle" id="tgl-scrim-top" type="button">Тень ↑</button>
+    <button class="chip toggle" id="tgl-scrim-bottom" type="button">Тень ↓</button>
+    <button class="chip toggle" id="tgl-guides" type="button">Зоны</button>
+  </div>
+
+  <div class="editor" id="editor" hidden>
+    <div class="editor-row" id="row-text">
+      <textarea id="edit-text" rows="2" spellcheck="true" placeholder="Текст… (*слово* — красным)"></textarea>
+    </div>
+    <div class="editor-row" id="row-stack" hidden>
+      <input id="edit-script" type="text" placeholder="рукописная строка">
+      <input id="edit-bar" type="text" placeholder="СЛОВО НА ПОЛОСЕ">
+    </div>
+    <div class="editor-row editor-controls">
+      <input id="edit-size" type="range" min="22" max="200" step="1">
+      <div class="variants" id="variants"></div>
+      <button id="btn-del" class="btn-del" type="button">Удалить</button>
+      <button id="btn-done" class="btn-done" type="button">Готово</button>
+    </div>
+  </div>
+</section>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-body">
+    <img id="modal-img" alt="Результат">
+    <div class="modal-btns">
+      <button id="btn-share" class="btn-main" type="button">Поделиться</button>
+      <a id="btn-download" class="btn-main btn-ghost" download>Скачать</a>
+      <button id="btn-close" class="btn-ghost btn-x" type="button">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="file-input" accept="image/*" hidden>
+<script src="app.js"></script>
+</body>
+</html>
