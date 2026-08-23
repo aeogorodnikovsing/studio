@@ -1,7 +1,7 @@
 /* Офлайн-кэш студии: cache-first, версия меняется при каждом обновлении файлов */
 'use strict';
 
-const CACHE = 'studio-v3';
+const CACHE = 'studio-v4';
 const ASSETS = [
   './',
   'index.html',
