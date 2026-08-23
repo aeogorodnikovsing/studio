@@ -593,6 +593,24 @@ document.fonts.ready.then(() => {
 setFormat('1:1');
 setMode('post');
 
+/* фото, присланное через «Поделиться» из другого приложения */
+if ('caches' in window && new URLSearchParams(location.search).has('shared')) {
+  (async () => {
+    try {
+      const inbox = await caches.open('share-inbox');
+      const resp = await inbox.match('shared-photo');
+      if (resp) {
+        const blob = await resp.blob();
+        await inbox.delete('shared-photo');
+        const reader = new FileReader();
+        reader.onload = () => { setMode('post'); loadPhoto(String(reader.result)); };
+        reader.readAsDataURL(blob);
+      }
+    } catch (err) { /* нет фото — обычный запуск */ }
+    history.replaceState(null, '', location.pathname);
+  })();
+}
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
   // при выходе обновления новый SW активируется и страница сама перезапускается один раз
