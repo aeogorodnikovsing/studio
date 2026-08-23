@@ -31,35 +31,37 @@
     rgba(20,20,20,0.88) 0%, rgba(20,20,20,0.84) 58%,
     rgba(20,20,20,0.50) 82%, rgba(20,20,20,0) 100%); }
 
-/* — печатный текст: белый с чёрным ореолом (post_insta) — */
-.l-headline .inner {
+/* — универсальный текст: шрифт × фон × цвет выбираются в редакторе — */
+.l-text.f-golos800 .inner {
   font-family: 'Golos Text', sans-serif; font-weight: 800;
-  text-transform: uppercase; letter-spacing: -0.02em;
-  color: #fff; line-height: 1.06;
-  text-shadow: 0 0 12px rgba(20,20,20,.9), 0 0 28px rgba(20,20,20,.7), 0 2px 8px rgba(20,20,20,.8);
+  text-transform: uppercase; letter-spacing: -0.02em; line-height: 1.06;
 }
-.l-print .inner {
-  font-family: 'Golos Text', sans-serif; font-weight: 600;
-  color: #fff; line-height: 1.3;
-  text-shadow: 0 0 12px rgba(20,20,20,.9), 0 0 28px rgba(20,20,20,.7), 0 2px 8px rgba(20,20,20,.8);
-}
+.l-text.f-golos .inner { font-family: 'Golos Text', sans-serif; font-weight: 600; line-height: 1.3; }
+.l-text.f-marck .inner { font-family: 'Marck Script', cursive; line-height: 1.15; }
 
-/* — рукописный: БЕЗ ореола, на сплошных чёрных полосах — */
-.l-script .inner { font-family: 'Marck Script', cursive; color: #fff; line-height: 1.85; }
-.l-script .inner .strip {
-  background: #141414; padding: 5px 16px 7px;
+/* полосы фона за строками (box-decoration-break — каждой строке своя полоса) */
+.l-text .inner .strip {
   box-decoration-break: clone; -webkit-box-decoration-break: clone;
 }
+.l-text.has-bg .inner .strip { padding: .15em .45em .2em; }
+.l-text.has-bg.f-marck .inner { line-height: 1.85; }
+.l-text.has-bg.f-golos800 .inner { line-height: 1.55; }
+.l-text.has-bg.f-golos .inner { line-height: 1.65; }
+.l-text.bg-black .inner .strip { background: #141414; }
+.l-text.bg-white .inner .strip { background: #FFFFFF; }
+.l-text.bg-red .inner .strip { background: #E8192C; }
 
-/* — заголовок титра: без ореола (читаемость даёт затемнение), метрики из titry/base.css — */
-.l-h1 .inner { text-shadow: none; letter-spacing: -0.025em; line-height: 1.04; }
+.l-text.c-white .inner { color: #FFFFFF; }
+.l-text.c-red .inner { color: #E8192C; }
+.l-text.c-black .inner { color: #141414; }
 
-/* — рукописный для титров: без полосы, поверх затемнения — */
-.l-freescript .inner { font-family: 'Marck Script', cursive; color: #fff; line-height: 1.12; }
-.l-freescript.red .inner { color: #E8192C; }
-
-/* — основной текст титров — */
-.l-body .inner { font-family: 'Golos Text', sans-serif; font-weight: 500; color: #fff; line-height: 1.42; }
+/* чёрный ореол — только печатному белому тексту без фона и только на фото (post_insta);
+   рукописный всегда без ореола, в титрах читаемость даёт затемнение */
+.stage-post .l-text.bg-none.c-white:not(.f-marck) .inner {
+  text-shadow: 0 0 12px rgba(20,20,20,.9), 0 0 28px rgba(20,20,20,.7), 0 2px 8px rgba(20,20,20,.8);
+}
+/* красный акцент на красном фоне или в красном тексте нечитаем — делаем белым */
+.l-text.bg-red .inner .accent, .l-text.c-red .inner .accent { color: #FFFFFF; }
 
 /* — красный маркер, строго одна строка — */
 .l-marker .inner {
@@ -102,7 +104,7 @@
 
 <header class="topbar">
   <nav class="tabs">
-    <button id="tab-post" class="tab active" type="button">Пост 1:1</button>
+    <button id="tab-post" class="tab active" type="button">Пост</button>
     <button id="tab-titry" class="tab" type="button">Титры 9:16</button>
   </nav>
   <button id="btn-export" class="btn-export" type="button">PNG</button>
@@ -130,6 +132,13 @@
 </main>
 
 <section class="panel" id="panel">
+  <div class="toolbar formats" id="toolbar-formats">
+    <span class="vlabel">Размер</span>
+    <button class="chip" data-fmt="1:1" type="button">1:1</button>
+    <button class="chip" data-fmt="3:4" type="button">3:4</button>
+    <button class="chip" data-fmt="4:5" type="button">4:5</button>
+    <button class="chip" data-fmt="9:16" type="button">9:16</button>
+  </div>
   <div class="toolbar" id="toolbar-post">
     <button class="chip chip-photo" data-act="photo" type="button">Фото</button>
     <button class="chip" data-add="headline" type="button">Заголовок</button>
@@ -140,10 +149,10 @@
     <button class="chip" data-add="swipe" type="button">Листай</button>
   </div>
   <div class="toolbar" id="toolbar-titry" hidden>
-    <button class="chip" data-add="h1" type="button">Заголовок</button>
-    <button class="chip" data-add="freescript" type="button">Рукопись</button>
+    <button class="chip" data-add="headline" type="button">Заголовок</button>
+    <button class="chip" data-add="script" type="button">Рукопись</button>
     <button class="chip" data-add="stack" type="button">Полоса</button>
-    <button class="chip" data-add="body" type="button">Текст</button>
+    <button class="chip" data-add="print" type="button">Текст</button>
     <button class="chip" data-add="marker" type="button">Маркер</button>
     <button class="chip" data-add="sticker" type="button">Стикер</button>
     <span class="sep"></span>
@@ -160,9 +169,11 @@
       <input id="edit-script" type="text" placeholder="рукописная строка">
       <input id="edit-bar" type="text" placeholder="СЛОВО НА ПОЛОСЕ">
     </div>
+    <div class="editor-row">
+      <div class="variants" id="variants"></div>
+    </div>
     <div class="editor-row editor-controls">
       <input id="edit-size" type="range" min="22" max="200" step="1">
-      <div class="variants" id="variants"></div>
       <button id="btn-del" class="btn-del" type="button">Удалить</button>
       <button id="btn-done" class="btn-done" type="button">Готово</button>
     </div>
