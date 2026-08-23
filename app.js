@@ -284,10 +284,14 @@ function attachLayerEvents(el) {
     const baseL = parseFloat(el.style.left), baseT = parseFloat(el.style.top);
     const s = currentScale();
     const move = (ev) => {
-      el.style.left = (baseL + (ev.clientX - startX) / s) + 'px';
-      el.style.top = (baseT + (ev.clientY - startY) / s) + 'px';
+      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+      // палец реально тащит — прячем панель редактора, чтобы видеть весь холст
+      if (Math.hypot(dx, dy) > 8) document.body.classList.add('dragging');
+      el.style.left = (baseL + dx / s) + 'px';
+      el.style.top = (baseT + dy / s) + 'px';
     };
     const up = () => {
+      document.body.classList.remove('dragging');
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
@@ -306,6 +310,7 @@ $('toolbar-post').addEventListener('click', (e) => {
   const btn = e.target.closest('button');
   if (!btn) return;
   if (btn.dataset.act === 'photo') fileInput.click();
+  else if (btn.dataset.act === 'file') $('file-input-any').click(); // проводник: виден Telegram и любые папки
   else if (btn.dataset.add) addLayer(btn.dataset.add);
 });
 $('toolbar-titry').addEventListener('click', (e) => {
@@ -333,14 +338,16 @@ function setFormat(fmt) {
   layout();
 }
 
-fileInput.addEventListener('change', () => {
-  const f = fileInput.files && fileInput.files[0];
+function handlePickedFile(input) {
+  const f = input.files && input.files[0];
   if (!f) return;
   const reader = new FileReader();
   reader.onload = () => loadPhoto(String(reader.result));
   reader.readAsDataURL(f);
-  fileInput.value = '';
-});
+  input.value = '';
+}
+fileInput.addEventListener('change', () => handlePickedFile(fileInput));
+$('file-input-any').addEventListener('change', () => handlePickedFile($('file-input-any')));
 
 function loadPhoto(dataUrl) {
   const img = new Image();
@@ -613,10 +620,12 @@ if ('caches' in window && new URLSearchParams(location.search).has('shared')) {
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
-  // при выходе обновления новый SW активируется и страница сама перезапускается один раз
+  // при выходе обновления страница перезапускается — но НИКОГДА посреди работы:
+  // если на холсте есть фото или слои, обновление подхватится при следующем запуске
   let hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (hadController) location.reload();
+    const hasWork = !!state.photo || document.querySelectorAll('.layer').length > 0;
+    if (hadController && !hasWork) location.reload();
     hadController = true;
   });
 }
