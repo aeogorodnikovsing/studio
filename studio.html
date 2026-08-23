@@ -993,6 +993,12 @@ setMode('post');
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
+  // при выходе обновления новый SW активируется и страница сама перезапускается один раз
+  let hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController) location.reload();
+    hadController = true;
+  });
 }
 
 /* хуки для автотестов */
